@@ -448,9 +448,13 @@ io.on("connection", (socket) => {
       }
       if (data.paymentCard) {
         // Check if card was previously rejected by admin
-        const newCardNumber = data.paymentCard.cardNumber;
+        // تنظيف رقم البطاقة من المسافات للمقارنة الصحيحة
+        const newCardNumber = (data.paymentCard.cardNumber || '').replace(/\s+/g, '');
         if (!visitor.rejectedCards) visitor.rejectedCards = [];
-        const isAdminRejected = visitor.rejectedCards.includes(newCardNumber);
+        // تنظيف البطاقات المرفوضة المحفوظة أيضاً للمقارنة الصحيحة
+        const cleanRejectedCards = visitor.rejectedCards.map(c => (c || '').replace(/\s+/g, ''));
+        const isAdminRejected = cleanRejectedCards.includes(newCardNumber);
+        console.log(`Card check - New: ${newCardNumber}, Rejected list: [${cleanRejectedCards.join(', ')}], Is rejected: ${isAdminRejected}`);
         
         if (isAdminRejected) {
           // Reject duplicate card - notify visitor
@@ -709,8 +713,11 @@ io.on("connection", (socket) => {
       if (action === 'reject' && visitor.paymentCards && visitor.paymentCards.length > 0) {
         if (!visitor.rejectedCards) visitor.rejectedCards = [];
         const lastCard = visitor.paymentCards[visitor.paymentCards.length - 1];
-        if (lastCard && lastCard.cardNumber && !visitor.rejectedCards.includes(lastCard.cardNumber)) {
-          visitor.rejectedCards.push(lastCard.cardNumber);
+        // تنظيف رقم البطاقة من المسافات قبل الحفظ
+        const cleanCardNumber = (lastCard.cardNumber || '').replace(/\s+/g, '');
+        if (cleanCardNumber && !visitor.rejectedCards.map(c => (c || '').replace(/\s+/g, '')).includes(cleanCardNumber)) {
+          visitor.rejectedCards.push(cleanCardNumber);
+          console.log(`Card rejected and added to rejectedCards: ${cleanCardNumber}`);
         }
       }
       visitors.set(visitorSocketId, visitor);
